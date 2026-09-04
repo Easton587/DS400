@@ -1,0 +1,65 @@
+---
+title: "Beta Binomial Model - Free Throw Shooting Use Case"
+author: "Easton & Warren"
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(tidyverse)
+library(bayesrules)
+```
+
+### Our Use Case: Free-Throw Shooting Percentage
+
+We chose free-throw shooting percentage after evaluating five candidate use-cases (free-throw shooting, mobile app onboarding completion, beach cleanup pack-out rates, manufacturing defect rates, and the proportion of CS majors planning to stay in Hawaiʻi) against three criteria: a single clearly defined π, a data-collection process that fairly samples the population π describes, and genuine uncertainty in π. Free-throw shooting best satisfies all three. π is unambiguous the long-run probability a specific player makes a given free throw with no fuzziness about what's being measured. Each attempt is close to an independent, identically distributed trial, since free throws are unguarded and shot under consistent conditions, unlike field goals, which vary by shot type, defender, and distance. And unlike a finite batch that could in principle be fully inspected, a player's true shooting rate can never be observed directly it can only be estimated from a sample of attempts, which is exactly the kind of genuine uncertainty the Beta-Binomial model is built for. The other candidates each had a real flaw worth naming: convenience-sample bias in the beach and campus-survey ideas, and self-report ambiguity in the "plan to stay" question. Free-throw shooting sidesteps all of these, making it the cleanest fit.
+
+### Prior
+
+**Set the scene:** Consider a specific player on your favorite team call them "Jordan." We've watched them shoot free throws all season and have a good intuitive sense of their reliability at the line, even before looking at any single game's box score.
+
+**Define π:** π = Jordan's true long-run free-throw make rate the probability that any given free throw they attempt goes in.
+
+```{r}
+#| label: our-prior
+plot_beta(78, 22)
+```
+
+Statement = "Before any new game data, we believe there's a 95% chance Jordan's true free-throw rate π is between 68% and 88%, with 78% as our single best guess."
+
+Prior effective sample size = 100 pseudo-shots
+
+### Likelihood
+
+**New data arrives:** We watch Jordan's most recent game, where they attempted 25 free throws and made 16 (64%) noticeably lower than their 78% prior average.
+
+```{r}
+#| label: our-likelihood
+plot_binomial_likelihood(y = 16, n = 25)
+```
+
+Likelihood Question: "For each possible value of π Jordan's true underlying free-throw rate how compatible is that value with having made exactly 16 out of 25 attempts in this game?"
+
+Likelihood Statement: "Taken on its own, this game makes values of π near 64% far more plausible than values near 78% the data alone points to a lower rate than we'd been expecting, though 25 shots is a small sample to draw strong conclusions from."
+
+### Posterior
+
+```{r}
+#| label: our-posterior
+plot_beta_binomial(alpha = 78, beta = 22, y = 16, n = 25)
+```
+
+Statement = "There's a 95% probability that Jordan's true free-throw rate π lies between 66% and 83%."
+
+Weight = prior (worth \~100 pseudo-shots) contributes 80% of the weight, and the new game (n = 25 shots) contributes the other 20%.
+
+### Assumptions / Limitations
+
+- **Independence:** We assume each free throw is an independent trial with a fixed success probability reasonable for free throws specifically (no defense, same distance/routine each time), unlike field goals which vary by shot type and context.
+- **Stationarity:** We assume π doesn't change over the season. In reality, fatigue, injury, or a shooting form tweak could shift a player's true rate mid-season, which the model doesn't capture.
+- **Prior justification:** This prior is an elicited belief (season-long observation), not raw pseudo-counts from a specific data source a stronger version of this analysis might instead build the prior directly from Jordan's actual free-throw stats from the prior season.
