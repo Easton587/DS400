@@ -1,0 +1,188 @@
+---
+title: "conditional_probability_workshop"
+format: html
+editor: visual
+---
+
+## Bayes Theorem & Conditional Probabilities Workshop
+
+### Data
+
+[Kaggle Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data)
+
+### Three Teams based on variable
+
+1.  Gender
+2.  Hypertension
+3.  Heart Disease
+
+### Exploratory Data Analysis
+
+- Download the data
+- Open an new QMD and name it conditional_probability_workshop
+- Read the data in with `read_csv()` and `here()`
+- Write R Code to create these 4 visualizations with `ggplot`
+
+```{r}
+library(tidyverse)
+library(here)
+
+stroke <- read_csv(here("Data/healthcare-dataset-stroke-data.csv"))
+glimpse(stroke)
+```
+
+```{r}
+# Plotting copy of the data with readable labels (the original stroke data stays unchanged)
+stroke_plot <- stroke %>%
+  mutate(stroke_status = factor(stroke, levels = c(0, 1),
+                                labels = c("No Stroke", "Stroke")))
+
+stroke_colors <- c("No Stroke" = "#476EA0", "Stroke" = "#962323")
+```
+
+```{r}
+# 1. Stroke count by gender
+stroke_plot %>%
+  filter(gender != "Other") %>%
+  ggplot(aes(x = gender, fill = stroke_status)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = stroke_colors) +
+  labs(title = "Stroke Count by Gender", x = "Gender",
+       y = "Number of Patients", fill = "Stroke Status") +
+  theme_minimal(base_size = 16)
+```
+
+```{r}
+# 2. Age distribution by stroke status
+ggplot(stroke_plot, aes(x = age, fill = stroke_status)) +
+  geom_histogram(bins = 30, alpha = 0.5, color = "black", position = "identity") +
+  scale_fill_manual(values = stroke_colors) +
+  labs(title = "Age Distribution by Stroke Status", x = "Age",
+       y = "Count", fill = "Stroke Status") +
+  theme_minimal(base_size = 16)
+```
+
+```{r}
+# 3. Average glucose level by stroke status
+ggplot(stroke_plot, aes(x = stroke_status, y = avg_glucose_level, fill = stroke_status)) +
+  geom_boxplot(alpha = 0.7) +
+  scale_fill_manual(values = stroke_colors) +
+  labs(title = "Average Glucose Level by Stroke Status", x = NULL,
+       y = "Average Glucose Level") +
+  theme_minimal(base_size = 16) +
+  theme(legend.position = "none")
+```
+
+```{r}
+# 4. Stroke count by hypertension
+stroke_plot %>%
+  mutate(hypertension = factor(hypertension, levels = c(0, 1),
+                               labels = c("No Hypertension", "Hypertension"))) %>%
+  ggplot(aes(x = hypertension, fill = stroke_status)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = stroke_colors) +
+  labs(title = "Stroke Count by Hypertension", x = "Hypertension Status",
+       y = "Number of Patients", fill = "Stroke Status") +
+  theme_minimal(base_size = 16)
+```
+
+```{r}
+# 5. Stroke count by heart disease
+stroke_plot %>%
+  mutate(heart_disease = factor(heart_disease, levels = c(0, 1),
+                                labels = c("No Heart Disease", "Heart Disease"))) %>%
+  ggplot(aes(x = heart_disease, fill = stroke_status)) +
+  geom_bar(position = "dodge") +
+  scale_fill_manual(values = stroke_colors) +
+  labs(title = "Stroke Count by Heart Disease", x = "Heart Disease Status",
+       y = "Number of Patients", fill = "Stroke Status") +
+  theme_minimal(base_size = 16)
+```
+
+### Find the Conditional Probability of Stroke P(B\|A) based on
+
+1.  Being a Male
+2.  Having Hypertension
+3.  Having Heart Disease
+
+##### P(B): probability of stroke
+
+```{r}
+probability_stroke <- stroke %>%
+  count(stroke) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(stroke == 1) %>%
+  pull(percent)
+
+probability_stroke
+```
+
+##### 1. Male
+
+```{r}
+# P(A|B): male given stroke
+probability_male_given_stroke <- stroke %>%
+  count(stroke, gender) %>%
+  group_by(stroke) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(stroke == 1, gender == "Male") %>%
+  pull(percent)
+
+# P(A): male
+probability_male <- stroke %>%
+  count(gender) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(gender == "Male") %>%
+  pull(percent)
+
+# P(B|A): stroke given male
+probability_male_given_stroke * probability_stroke / probability_male
+```
+
+##### 2. Hypertension
+
+```{r}
+probability_hypertension_given_stroke <- stroke %>%
+  count(stroke, hypertension) %>%
+  group_by(stroke) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(stroke == 1, hypertension == 1) %>%
+  pull(percent)
+
+probability_hypertension <- stroke %>%
+  count(hypertension) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(hypertension == 1) %>%
+  pull(percent)
+
+probability_hypertension_given_stroke * probability_stroke / probability_hypertension
+```
+
+##### 3. Heart disease
+
+```{r}
+probability_heart_given_stroke <- stroke %>%
+  count(stroke, heart_disease) %>%
+  group_by(stroke) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(stroke == 1, heart_disease == 1) %>%
+  pull(percent)
+
+probability_heart <- stroke %>%
+  count(heart_disease) %>%
+  mutate(percent = n / sum(n)) %>%
+  filter(heart_disease == 1) %>%
+  pull(percent)
+
+probability_heart_given_stroke * probability_stroke / probability_heart
+```
+
+### Report out your conditional probabilities and we will compare
+
+Given a patient is male, there is about a 5.1% chance of stroke; given hypertension, about 13.3%; given heart disease, about 17.0%.
+
+### Discussion
+
+What question are we asking exactly - [WHO](https://www.who.int/news-room/fact-sheets/detail/stroke) - [Data Quality](https://link.springer.com/10.1186/s12916-026-04981-y)
+
+We're estimating P(stroke \| male, hypertension, heart disease.
